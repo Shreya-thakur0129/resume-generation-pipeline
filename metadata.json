@@ -1,0 +1,1 @@
+{"name":"Resume Generation Pipeline","description":"Automated AI resume compilation using Gemini and Google Workspace integrations.","requestFramePermissions":["microphone"],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}
