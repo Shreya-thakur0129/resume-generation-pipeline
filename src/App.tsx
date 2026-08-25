@@ -28,14 +28,14 @@ const INITIAL_CONFIG: AppConfig = {
   isDemoMode: true, // Default to true so user gets an instant, working experience
   jobsToFetch: 140,
   sheets: {
-    spreadsheetId: '1DEMO_CANDIDATE_TRACKER_SHEET_2026',
-    worksheetName: 'Engineering Candidates',
+    spreadsheetId: localStorage.getItem('spreadsheet_id') || '1DEMO_CANDIDATE_TRACKER_SHEET_2026',
+    worksheetName: localStorage.getItem('worksheet_name') || 'Engineering Candidates',
     selectedRow: 2,
     columnMapping: DEFAULT_COLUMN_MAPPING,
   },
   drive: {
-    folderId: '1DEMO_RESUME_ARCHIVE_FOLDER',
-    folderName: 'Enterprise AI Resumes 2026',
+    folderId: localStorage.getItem('drive_folder_id') || '1DEMO_RESUME_ARCHIVE_FOLDER',
+    folderName: localStorage.getItem('drive_folder_name') || 'Enterprise AI Resumes 2026',
     createCandidateFolder: false,
     sharingMode: 'LINK_ACCESS',
     namingPattern: '{name}_Resume_{year}.pdf',
@@ -101,6 +101,18 @@ export default function App() {
     if (newConfig.ai.apiKey !== undefined) {
       localStorage.setItem('gemini_api_key', newConfig.ai.apiKey);
     }
+    if (newConfig.sheets.spreadsheetId) {
+      localStorage.setItem('spreadsheet_id', newConfig.sheets.spreadsheetId);
+    }
+    if (newConfig.sheets.worksheetName) {
+      localStorage.setItem('worksheet_name', newConfig.sheets.worksheetName);
+    }
+    if (newConfig.drive.folderId) {
+      localStorage.setItem('drive_folder_id', newConfig.drive.folderId);
+    }
+    if (newConfig.drive.folderName) {
+      localStorage.setItem('drive_folder_name', newConfig.drive.folderName);
+    }
   };
 
   // Authentication state
@@ -134,6 +146,13 @@ export default function App() {
       }
     );
   }, []);
+
+  // Automatically load live candidate rows when Sheets config changes in Production Mode
+  useEffect(() => {
+    if (!config.isDemoMode && accessToken && config.sheets.spreadsheetId && !config.sheets.spreadsheetId.startsWith('1DEMO')) {
+      handleLoadLiveCandidates();
+    }
+  }, [config.sheets.spreadsheetId, config.sheets.worksheetName, config.isDemoMode, accessToken]);
 
   const addLog = (
     stage: PipelineStageId | 'system' | 'auth',
