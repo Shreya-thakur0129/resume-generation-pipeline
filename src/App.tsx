@@ -322,6 +322,11 @@ export default function App() {
         addLog('system', 'WARNING', `Batch execution stopped on row ${candidate.rowNumber} due to "Stop on error" setting.`);
         break;
       }
+
+      if (i < targetList.length - 1) {
+        addLog('system', 'INFO', 'Waiting 4.5 seconds to comply with Gemini Free Tier rate limits...');
+        await new Promise((resolve) => setTimeout(resolve, 4500));
+      }
     }
 
     setIsRunning(false);

@@ -14,6 +14,7 @@ import { generateLatexResume } from './latexService';
 import { compileResumeToPdf, CompilationResult } from './pdfService';
 import { uploadPdfToDrive } from './driveService';
 import { fetchWorksheetCandidates, commitCandidateStatusToSheet } from './sheetsService';
+import { CANDIDATES } from '../data/candidateProfiles';
 
 export interface PipelineCallbacks {
   onStateChange: (state: PipelineOverallState) => void;
@@ -76,8 +77,35 @@ export class PipelineOrchestrator {
     resumeState?: Partial<GeneratedResumeRecord>
   ): Promise<GeneratedResumeRecord> {
     const pipelineStartTime = Date.now();
-    const candidateName = candidate.name || `Row ${candidate.rowNumber}`;
     this.isCancelled = false;
+
+    // Enrich candidate details if the sheet tab name corresponds to a specific master candidate profile
+    const sheetNameLower = (this.config.sheets.worksheetName || '').toLowerCase();
+    const matchedProfile = CANDIDATES.find(c => {
+      const firstWord = c.name.toLowerCase().split(' ')[0];
+      return sheetNameLower.includes(c.id.toLowerCase()) || sheetNameLower.includes(firstWord);
+    });
+
+    if (matchedProfile) {
+      candidate.name = matchedProfile.name;
+      candidate.email = matchedProfile.email;
+      candidate.phone = matchedProfile.phone || candidate.phone;
+      candidate.location = matchedProfile.location || candidate.location;
+      candidate.linkedin = matchedProfile.linkedin || candidate.linkedin;
+      candidate.github = matchedProfile.github || candidate.github;
+      candidate.portfolio = matchedProfile.portfolio || candidate.portfolio;
+      
+      // Inject master candidate details into the raw row fields
+      candidate.skills = matchedProfile.skills.map(s => `${s.category}: ${s.items.join(', ')}`).join('\n');
+      candidate.experience = matchedProfile.experience.map(e => `${e.role} at ${e.company} (${e.startDate} - ${e.endDate})\n${e.bullets.join('\n')}`).join('\n\n');
+      candidate.projects = matchedProfile.projects.map(p => `${p.title} (${p.technologies.join(', ')})\n${p.bullets.join('\n')}`).join('\n\n');
+      candidate.education = matchedProfile.education.map(ed => `${ed.degree} from ${ed.institution} (${ed.gradDate})`).join('\n');
+      candidate.certifications = matchedProfile.certifications.map(cer => `${cer.name} by ${cer.issuer} (${cer.date})`).join('\n');
+      candidate.achievements = matchedProfile.achievements.join('\n');
+      candidate.summary = matchedProfile.summary;
+    }
+
+    const candidateName = candidate.name || `Row ${candidate.rowNumber}`;
 
     const resultRecord: GeneratedResumeRecord = {
       id: resumeState?.id || 'res_' + Math.random().toString(36).substring(2, 9),
